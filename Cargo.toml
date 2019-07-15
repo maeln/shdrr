@@ -1,0 +1,23 @@
+[package]
+name = "shdrr"
+version = "0.1.0"
+description = "A live shader compiler using shaderc."
+authors = ["Maël <contact@maeln.com>"]
+edition = "2018"
+repository = "https://github.com/maeln/shdrr"
+license = "CECILL-2.1"
+readme = "README.md"
+keywords = ["spirv", "SPIR-V", "shaderc", "live"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.release]
+lto = true
+
+[dependencies]
+notify = "4.0"
+clap = "2.33"
+shaderc = "0.5"
+
+[[bin]]
+name = "shdrr"
+doc = false
