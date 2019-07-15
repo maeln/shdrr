@@ -10,7 +10,27 @@ Right now, it detect the shader type (compute, vertex, fragment) using the file 
 
 ## Usage
 
-See `shadrr --help` for usage.
+See `shdrr --help` for usage:
+```
+SHDRR: Live compiler for SPIRV based on shaderc. 
+
+USAGE:
+    shdrr [FLAGS] [OPTIONS]
+
+FLAGS:
+    -h, --help       Prints help information
+    -r               Look for shader file recursively
+    -V, --version    Prints version information
+    -v               Verbose output
+
+OPTIONS:
+    -d <dir>           Directory with the shaders
+    -o <output>        Output directory
+```
+
+Exemple: To compile every shader contained in the directory `./shaders/src` and its sub-directory to `.shaders/bin`, with verbosity:
+
+`shdrr -rv -d shaders/src -o shaders/bin`
 
 ## Installation
 
