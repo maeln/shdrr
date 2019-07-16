@@ -11,6 +11,16 @@ use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
+#[derive(Debug, Clone)]
+struct ShdrrConf {
+    dir: PathBuf,
+    output: PathBuf,
+    verbose: bool,
+    recursive: bool,
+    optimization: String,
+    target: String,
+}
+
 fn main() {
     let matches = App::new("SHDRR: Live compiler for SPIRV based on shaderc.")
         .arg(
@@ -29,6 +39,18 @@ fn main() {
             Arg::with_name("output")
                 .short("o")
                 .help("Output directory")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("optimization")
+                .short("O")
+                .help("Optimization level")
+                .long_help(
+                    "The optimization level follow the ones used by shaderc: 
+                1 or nothing is performance optimization (default value), 
+                0 is no optimization for debugging, 
+                s is optimization for size.",
+                )
                 .takes_value(true),
         )
         .get_matches();
@@ -64,9 +86,18 @@ fn main() {
     let output_dir = matches
         .value_of("output")
         .map_or(dir.clone(), |o| PathBuf::from(o));
+    let conf = ShdrrConf {
+        dir,
+        output: output_dir,
+        verbose: matches.is_present("verbose"),
+        recursive: rec,
+        optimization: matches.value_of("optimization").unwrap_or("1").to_string(),
+        target: String::new(),
+    };
+
     loop {
         match rx.recv() {
-            Ok(event) => handle_event(event, &dir, &output_dir, matches.is_present("verbose")),
+            Ok(event) => handle_event(event, conf.clone()),
             Err(e) => println!("watch error: {:?}", e),
         }
     }
@@ -99,10 +130,10 @@ fn get_shader_kind_from_filename(path: &PathBuf) -> Option<shaderc::ShaderKind> 
     }
 }
 
-fn compile_shader(path: &PathBuf, verbose: bool) -> Option<Vec<u8>> {
+fn compile_shader(path: &PathBuf, conf: ShdrrConf) -> Option<Vec<u8>> {
     let kind = get_shader_kind_from_filename(path);
     if kind.is_none() {
-        if verbose {
+        if conf.verbose {
             println!(
                 "[NFO] Could not compile {}: No valid extension.",
                 path.display()
@@ -117,8 +148,13 @@ fn compile_shader(path: &PathBuf, verbose: bool) -> Option<Vec<u8>> {
 
     let mut compiler = shaderc::Compiler::new().unwrap();
     let mut options = shaderc::CompileOptions::new().unwrap();
+    match conf.optimization.as_str() {
+        "0" => options.set_optimization_level(shaderc::OptimizationLevel::Zero),
+        "s" => options.set_optimization_level(shaderc::OptimizationLevel::Size),
+        _ => options.set_optimization_level(shaderc::OptimizationLevel::Performance),
+    };
 
-    if verbose {
+    if conf.verbose {
         println!("[NFO] Compiling file {} ...", path.display());
     }
 
@@ -138,15 +174,15 @@ fn compile_shader(path: &PathBuf, verbose: bool) -> Option<Vec<u8>> {
         return None;
     }
 
-    if verbose {
+    if conf.verbose {
         println!("[NFO] Successfully compiled {} ...", path.display());
     }
     let bin = binary_result.unwrap().as_binary_u8().to_owned();
     Some(bin)
 }
 
-fn compile_and_write(path: &PathBuf, basedir: &PathBuf, output: &PathBuf, verbose: bool) {
-    let bin = compile_shader(path, verbose);
+fn compile_and_write(path: &PathBuf, conf: ShdrrConf) {
+    let bin = compile_shader(path, conf.clone());
     if bin.is_none() {
         return;
     }
@@ -160,9 +196,9 @@ fn compile_and_write(path: &PathBuf, basedir: &PathBuf, output: &PathBuf, verbos
         ext.to_str().unwrap()
     );
     let mut output_path = PathBuf::new();
-    output_path.push(output);
+    output_path.push(conf.output);
 
-    let dir_path_res = path.strip_prefix(basedir.canonicalize().unwrap());
+    let dir_path_res = path.strip_prefix(conf.dir.canonicalize().unwrap());
     if dir_path_res.is_ok() {
         let dir_path = dir_path_res.unwrap();
         let intermediate_dir = dir_path.parent();
@@ -173,7 +209,7 @@ fn compile_and_write(path: &PathBuf, basedir: &PathBuf, output: &PathBuf, verbos
 
     output_path.push(new_filename);
 
-    if verbose {
+    if conf.verbose {
         println!("[NFO] Writing shader to {}", output_path.display());
     }
 
@@ -190,18 +226,16 @@ fn compile_and_write(path: &PathBuf, basedir: &PathBuf, output: &PathBuf, verbos
             output_path.display(),
             write_res.err().unwrap()
         );
-    } else if verbose {
+    } else if conf.verbose {
         println!("[NFO] Finished writing {}", output_path.display());
     }
 }
 
-fn handle_event(event: notify::DebouncedEvent, basedir: &PathBuf, output: &PathBuf, verbose: bool) {
+fn handle_event(event: notify::DebouncedEvent, conf: ShdrrConf) {
     match event {
-        notify::DebouncedEvent::Create(path) => compile_and_write(&path, basedir, output, verbose),
-        notify::DebouncedEvent::Write(path) => compile_and_write(&path, basedir, output, verbose),
-        notify::DebouncedEvent::Rename(_, path) => {
-            compile_and_write(&path, basedir, output, verbose)
-        }
+        notify::DebouncedEvent::Create(path) => compile_and_write(&path, conf),
+        notify::DebouncedEvent::Write(path) => compile_and_write(&path, conf),
+        notify::DebouncedEvent::Rename(_, path) => compile_and_write(&path, conf),
         _ => (),
     }
 }
