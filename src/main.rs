@@ -18,7 +18,8 @@ struct ShdrrConf {
     verbose: bool,
     recursive: bool,
     optimization: String,
-    target: String,
+    target_env: shaderc::TargetEnv,
+    target_spirv: String,
 }
 
 fn main() {
@@ -47,11 +48,39 @@ fn main() {
                 .help("Optimization level")
                 .long_help(
                     "The optimization level follow the ones used by shaderc: 
-                1 or nothing is performance optimization (default value), 
+                1 or nothing is performance optimization, 
                 0 is no optimization for debugging, 
                 s is optimization for size.",
                 )
-                .takes_value(true),
+                .takes_value(true)
+                .default_value("1"),
+        )
+        .arg(
+            Arg::with_name("env")
+                .short("e")
+                .help("Target environnement for Shaderc")
+                .long_help(
+                    "This option let you choose the target environnement for Shaderc, 
+            
+            Accepted value are: 
+            vulkan, opengl, opengl_compat"
+                )
+                .takes_value(true)
+                .default_value("vulkan"),
+        )
+        // This is currently unsupported due to libshaderc not exposing yet how to choose the spv version, see:
+        // https://github.com/google/shaderc/issues/742
+        .arg(
+            Arg::with_name("spirv")
+                .short("s")
+                .help("SPIR-V version to use for the compiled shader")
+                .long_help(
+                    "This option let you choose the SPIR-V version to be used for the compiled shader,
+            
+            Accepted value are: 1.0, 1.1, 1.2, 1.3, 1.4",
+                )
+                .takes_value(true)
+                .default_value("1.0"),
         )
         .get_matches();
     let (tx, rx) = channel();
@@ -91,14 +120,30 @@ fn main() {
         output: output_dir,
         verbose: matches.is_present("verbose"),
         recursive: rec,
-        optimization: matches.value_of("optimization").unwrap_or("1").to_string(),
-        target: String::new(),
+        optimization: matches.value_of("optimization").unwrap().to_string(),
+        target_env: str_env_to_enum(matches.value_of("env").unwrap()),
+        target_spirv: matches.value_of("spirv").unwrap().to_string(),
     };
 
     loop {
         match rx.recv() {
             Ok(event) => handle_event(event, conf.clone()),
             Err(e) => println!("watch error: {:?}", e),
+        }
+    }
+}
+
+fn str_env_to_enum(env: &str) -> shaderc::TargetEnv {
+    match env {
+        "vulkan" => shaderc::TargetEnv::Vulkan,
+        "opengl" => shaderc::TargetEnv::OpenGL,
+        "opengl_compat" => shaderc::TargetEnv::OpenGLCompat,
+        _ => {
+            println!(
+                "[ERR] Could not recognized env {}, defaulting to 'vulkan'.",
+                env
+            );
+            return shaderc::TargetEnv::Vulkan;
         }
     }
 }
@@ -153,6 +198,8 @@ fn compile_shader(path: &PathBuf, conf: ShdrrConf) -> Option<Vec<u8>> {
         "s" => options.set_optimization_level(shaderc::OptimizationLevel::Size),
         _ => options.set_optimization_level(shaderc::OptimizationLevel::Performance),
     };
+
+    options.set_target_env(conf.target_env, 0);
 
     if conf.verbose {
         println!("[NFO] Compiling file {} ...", path.display());

@@ -21,14 +21,40 @@ USAGE:
     shdrr [FLAGS] [OPTIONS]
 
 FLAGS:
-    -h, --help       Prints help information
-    -r               Look for shader file recursively
-    -V, --version    Prints version information
-    -v               Verbose output
+    -h, --help       
+            Prints help information
+
+    -r               
+            Look for shader file recursively
+
+    -V, --version    
+            Prints version information
+
+    -v               
+            Verbose output
+
 
 OPTIONS:
-    -d <dir>           Directory with the shaders
-    -o <output>        Output directory
+    -d <dir>                 
+            Directory with the shaders
+
+    -e <env>                 
+            This option let you choose the target environnement for Shaderc, 
+                        
+                        Accepted value are: 
+                        vulkan, opengl, opengl_compat [default: vulkan]
+    -O <optimization>        
+            The optimization level follow the ones used by shaderc: 
+                            1 or nothing is performance optimization, 
+                            0 is no optimization for debugging, 
+                            s is optimization for size. [default: 1]
+    -o <output>              
+            Output directory
+
+    -s <spirv>               
+            This option let you choose the SPIR-V version to be used for the compiled shader,
+                        
+                        Accepted value are: 1.0, 1.1, 1.2, 1.3, 1.4 [default: 1.0]
 ```
 
 Exemple: To compile every shader contained in the directory `./shaders/src` and its sub-directory to `.shaders/bin`, with verbosity:
