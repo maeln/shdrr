@@ -1,5 +1,8 @@
 # SHDRR: Live shader compiler 
 
+[![Crates.io](https://img.shields.io/crates/v/shdrr.svg)](https://crates.io/crates/shdrr)
+[![Build Status](https://travis-ci.org/maeln/shdrr.svg?branch=master)](https://travis-ci.org/maeln/shdrr)
+
 SHDRR is a live shader compiler, as in, it will automatically detect if a file changed within a directory and recompile it to SPIR-V using [shaderc](https://github.com/google/shaderc).
 
 Right now, it detect the shader type (compute, vertex, fragment) using the file extension:
