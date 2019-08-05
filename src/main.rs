@@ -238,7 +238,7 @@ fn compile_and_write(path: &PathBuf, conf: ShdrrConf) {
     let ext = path.extension().unwrap();
     let filename = path.file_stem().unwrap();
     let new_filename = format!(
-        "{}.{}.spriv",
+        "{}.{}.spirv",
         filename.to_str().unwrap(),
         ext.to_str().unwrap()
     );
