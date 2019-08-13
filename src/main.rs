@@ -245,12 +245,14 @@ fn compile_and_write(path: &PathBuf, conf: ShdrrConf) {
     let mut output_path = PathBuf::new();
     output_path.push(conf.output);
 
-    let dir_path_res = path.strip_prefix(conf.dir.canonicalize().unwrap());
+    let c_path = path.canonicalize().unwrap();
+    let dir_path_res = c_path.strip_prefix(conf.dir.canonicalize().unwrap());
     if dir_path_res.is_ok() {
         let dir_path = dir_path_res.unwrap();
         let intermediate_dir = dir_path.parent();
         if intermediate_dir.is_some() {
-            output_path.push(intermediate_dir.unwrap());
+            let int_dit = intermediate_dir.unwrap();
+            output_path.push(int_dit);
         }
     }
 
