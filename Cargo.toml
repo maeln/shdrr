@@ -1,6 +1,6 @@
 [package]
 name = "shdrr"
-version = "0.1.2"
+version = "0.1.3"
 description = "A live shader compiler using shaderc."
 authors = ["Maël <contact@maeln.com>"]
 edition = "2018"
